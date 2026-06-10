@@ -328,8 +328,6 @@ Create a `.env` file in the root of the project and add:
 PORT=7000
 MONGO_URL=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 ```
 
 > ⚠️ Never push your `.env` file to GitHub. It is already in `.gitignore`.
