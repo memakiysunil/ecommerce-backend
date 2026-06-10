@@ -1,27 +1,41 @@
 # 🛒 E-Commerce Backend API
 
-A RESTful backend API for an e-commerce platform built with **Node.js**, **Express.js**, and **MongoDB**. It supports user authentication, product management, cart operations, and order processing with Razorpay payment integration.
+A RESTful backend API for an e-commerce platform built with **Node.js**, **Express.js**, and **MongoDB**. It supports user authentication, product management, cart operations, and order processing.
 
 ---
 
-## 🚀 Live Demo
+## 🌐 Live Demo
 
-> **Deployed URL:** `https://your-deployed-url.com`  
-> *(Update this after deploying on Render / Railway / etc.)*
+**Base URL:** https://ecommerce-backend-52ui.onrender.com
 
-**Base URL:** `https://your-deployed-url.com`
+> ⚠️ Note: Free tier server sleeps after 15 minutes of inactivity. First request may take 30-60 seconds to wake up the server.
 
-Test the API root:
+**Test Endpoints:**
 ```
-GET https://your-deployed-url.com/
+GET   https://ecommerce-backend-52ui.onrender.com/
+POST  https://ecommerce-backend-52ui.onrender.com/user/signup
+POST  https://ecommerce-backend-52ui.onrender.com/user/login
+GET   https://ecommerce-backend-52ui.onrender.com/product/searchproducts
 ```
-Response:
-```json
-{
-  "success": true,
-  "message": "E-commerce Backend API Running 🚀"
-}
-```
+
+---
+
+## ✨ Features
+
+- User Registration & Login
+- JWT Authentication & Authorization
+- Role-Based Access Control (Admin/User)
+- Product Management (CRUD)
+- Shopping Cart Management
+- Order Management
+- Password Hashing using bcrypt
+- Request Validation using Joi
+- Global Error Handling
+- Rate Limiting
+- Helmet Security Headers
+- MongoDB Atlas Integration
+- RESTful API Design
+- MVC Architecture
 
 ---
 
@@ -38,7 +52,6 @@ Response:
 | Helmet | Security headers |
 | Morgan | HTTP request logging |
 | express-rate-limit | Rate limiting |
-| Razorpay | Payment gateway |
 | dotenv | Environment variables |
 
 ---
@@ -92,6 +105,53 @@ ecommerce-backend/
 
 ---
 
+## 🚀 API Endpoints
+
+> Protected routes require: `Authorization: Bearer <your_jwt_token>`
+
+### 👤 Authentication
+
+```
+POST   /user/signup              → Register new user
+POST   /user/login               → Login & get JWT token
+GET    /user/profile             → Get logged-in user profile (Auth)
+PATCH  /user/profile/password    → Update password (Auth)
+```
+
+---
+
+### 📦 Products
+
+```
+POST    /product/singleproduct              → Add one product (Admin only)
+POST    /product/createManyProducts         → Add multiple products (Admin only)
+PUT     /product/updateproduct/:productID   → Update a product (Admin only)
+DELETE  /product/deleteproduct/:productID   → Delete a product (Admin only)
+GET     /product/searchproducts             → Search products (Auth)
+```
+
+---
+
+### 🛒 Cart
+
+```
+POST    /cart/addtocart/:productID    → Add product to cart (Auth)
+PATCH   /cart/updatecart/:productID   → Update cart item quantity (Auth)
+DELETE  /cart/deletecart/:productID   → Remove product from cart (Auth)
+GET     /cart/getcart                 → Get user's cart (Auth)
+```
+
+---
+
+### 🧾 Orders
+
+```
+POST   /order/orders/:productID   → Place an order (Auth)
+GET    /order/getorder            → Get user's orders (Auth)
+```
+
+---
+
 ## 🏗️ MVC Architecture
 
 This project follows the **MVC (Model - View - Controller)** pattern. Since this is a backend-only API (no frontend/views), it uses a **Model - Controller** structure with **Routes** acting as the entry point.
@@ -102,25 +162,21 @@ HTTP Request
      ▼
 ┌─────────────┐
 │   Routes    │  ← Receives the request, applies middleware, calls controller
-│ (routes/)   │    e.g. router.post('/login', validate, controller.login)
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│ Middleware  │  ← Runs before controller: Auth check, Rate limit, Validation
-│(middleware/)│    e.g. jwtAuthMiddleware, validateRequest, checkAdminRole
+│ Middleware  │  ← Auth check, Rate limit, Validation
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
 │ Controller  │  ← Business logic: what should happen for this request
-│(controllers)│    e.g. hash password, save user, return response
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
 │    Model    │  ← Talks to MongoDB using Mongoose schema
-│  (models/)  │    e.g. User.create(), Product.find()
 └──────┬──────┘
        │
        ▼
@@ -132,53 +188,36 @@ HTTP Request
 ### 📌 Each Layer Explained
 
 **Model (`models/`)** — Defines the database schema (shape of data)
-```js
-// models/User.js
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  password: String,
-  role: { type: String, default: 'user' }
-});
+```
+User    → name, email, password, role (user/admin)
+Product → name, price, description, category, stock
+Cart    → user, items[ { product, quantity } ]
+Order   → user, product, quantity, address, status
 ```
 
 **Controller (`controllers/`)** — Contains the actual logic for each API
-```js
-// controllers/userController.js
-const signup = async (req, res, next) => {
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
-  const user = await User.create({ ...req.body, password: hashedPassword });
-  res.status(201).json({ success: true, user });
-};
+```
+userController    → signup, login, getProfile, updatePassword
+productController → singleProduct, createMany, update, delete, search
+cartController    → addToCart, updateCart, deleteCart, getCart
+orderController   → placeOrder, getOrders
 ```
 
-**Route (`routes/`)** — Maps URL + HTTP method to the right controller function
-```js
-// routes/userRoutes.js
-router.post('/signup', validateRequest(signup), userController.signup);
-router.post('/login',  strictLimiter, userController.login);
+**Route (`routes/`)** — Maps URL + HTTP method to the right controller
+```
+/user     → userRoutes.js
+/product  → productRoutes.js
+/cart     → cartRoutes.js
+/order    → orderRoutes.js
 ```
 
 **Middleware (`middleware/`)** — Reusable logic that runs between Route → Controller
-```js
-// middleware/authMiddleware.js
-// Checks if JWT token is valid before allowing access
-const jwtAuthMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  req.user = decoded;
-  next();
-};
 ```
-
-**Validator (`validators/`)** — Joi schemas that validate request body shape
-```js
-// validators/userValidator.js — runs BEFORE controller
-const signup = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required()
-});
+authMiddleware        → Verifies JWT token on protected routes
+adminMiddleware       → Checks if user role is 'admin'
+validateMiddleware    → Validates request body using Joi schemas
+rateLimiterMiddleware → Global + strict rate limiting
+errorMiddleware       → Global error handler
 ```
 
 ---
@@ -187,7 +226,7 @@ const signup = Joi.object({
 
 This project currently uses a **Route → Middleware → Controller → Model** flow.
 
-For scalability, a **Service Layer** can be added between Controller and Model. Here's how the full architecture looks with it:
+For scalability, a **Service Layer** can be added between Controller and Model:
 
 ```
 HTTP Request
@@ -210,7 +249,6 @@ HTTP Request
        ▼
 ┌─────────────┐
 │   Service   │  ← All business logic lives here
-│ (services/) │    DB queries, calculations, transformations
 └──────┬──────┘
        │
        ▼
@@ -230,82 +268,11 @@ HTTP Request
 | DB query (find/save) | ❌ | ✅ |
 | Calculate order total | ❌ | ✅ |
 
-### 📌 Example — Without vs With Service Layer
-
-**❌ Without Service (fat controller — hard to maintain):**
-```js
-// controllers/userController.js
-const signup = async (req, res, next) => {
-  try {
-    const exists = await User.findOne({ email: req.body.email });
-    if (exists) return res.status(400).json({ message: 'Email already exists' });
-
-    const hashed = await bcrypt.hash(req.body.password, 10);
-    const user = await User.create({ ...req.body, password: hashed });
-
-    res.status(201).json({ success: true, user });
-  } catch (err) {
-    next(err);
-  }
-};
-```
-
-**✅ With Service (clean & reusable):**
-```js
-// services/userService.js — only business logic
-const createUser = async (data) => {
-  const exists = await User.findOne({ email: data.email });
-  if (exists) throw new Error('Email already exists');
-
-  const hashed = await bcrypt.hash(data.password, 10);
-  return await User.create({ ...data, password: hashed });
-};
-
-module.exports = { createUser };
-```
-
-```js
-// controllers/userController.js — only req/res
-const userService = require('../services/userService');
-
-const signup = async (req, res, next) => {
-  try {
-    const user = await userService.createUser(req.body);
-    res.status(201).json({ success: true, user });
-  } catch (err) {
-    next(err);
-  }
-};
-```
-
-### 📌 Folder Structure with Service Layer
-
-```
-ecommerce-backend/
-│
-├── controllers/         ← req/res only
-│   └── userController.js
-│
-├── services/            ← business logic (add this folder)
-│   ├── userService.js
-│   ├── productService.js
-│   ├── cartService.js
-│   └── orderService.js
-│
-├── models/              ← DB schema only
-│   └── User.js
-│
-└── routes/              ← URL mapping only
-    └── userRoutes.js
-```
-
-> 💡 **When to add Service Layer?** When your controller functions start growing beyond 20–30 lines, or when you need the same logic in multiple controllers — that's the right time to extract a service.
+> 💡 **When to add Service Layer?** When controller functions grow beyond 20-30 lines, or when the same logic is needed in multiple controllers.
 
 ---
 
 ## ⚙️ Local Setup
-
-Follow these steps to run the project on your machine:
 
 ### 1. Clone the Repository
 
@@ -322,8 +289,6 @@ npm install
 
 ### 3. Create `.env` File
 
-Create a `.env` file in the root of the project and add:
-
 ```env
 PORT=7000
 MONGO_URL=your_mongodb_connection_string
@@ -335,68 +300,14 @@ JWT_SECRET=your_jwt_secret_key
 ### 4. Start the Server
 
 ```bash
-# Production
-npm start
-
 # Development (with auto-reload)
 npx nodemon server.js
+
+# Production
+npm start
 ```
 
 Server will run at: `http://localhost:7000`
-
----
-
-## 🔗 API Endpoints
-
-All protected routes require this header:
-```
-Authorization: Bearer <your_jwt_token>
-```
-
----
-
-### 👤 User Routes — `/user`
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/user/signup` | ❌ | Register new user |
-| POST | `/user/login` | ❌ | Login and get JWT token |
-| GET | `/user/profile` | ✅ | Get logged-in user profile |
-| PATCH | `/user/profile/password` | ✅ | Update password |
-
----
-
-### 📦 Product Routes — `/product`
-
-> Admin role required for create/update/delete operations.
-
-| Method | Endpoint | Auth | Admin | Description |
-|---|---|---|---|---|
-| POST | `/product/singleproduct` | ✅ | ✅ | Add one product |
-| POST | `/product/createManyProducts` | ✅ | ✅ | Add multiple products |
-| PUT | `/product/updateproduct/:productID` | ✅ | ✅ | Update a product |
-| DELETE | `/product/deleteproduct/:productID` | ✅ | ✅ | Delete a product |
-| GET | `/product/searchproducts` | ✅ | ❌ | Search products |
-
----
-
-### 🛒 Cart Routes — `/cart`
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/cart/addtocart/:productID` | ✅ | Add product to cart |
-| PATCH | `/cart/updatecart/:productID` | ✅ | Update cart item quantity |
-| DELETE | `/cart/deletecart/:productID` | ✅ | Remove product from cart |
-| GET | `/cart/getcart` | ✅ | View user's cart |
-
----
-
-### 🧾 Order Routes — `/order`
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/order/orders/:productID` | ✅ | Place an order |
-| GET | `/order/getorder` | ✅ | Get user's orders |
 
 ---
 
@@ -411,42 +322,34 @@ Authorization: Bearer <your_jwt_token>
 
 ---
 
-## ☁️ Deployment Guide (Render)
+## ☁️ Deployment
 
-1. Push your code to GitHub (make sure `.env` is in `.gitignore`)
-2. Go to [https://render.com](https://render.com) and create a new **Web Service**
-3. Connect your GitHub repository
-4. Set the following:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-5. Add your environment variables in the **Environment** section on Render:
-   - `MONGO_URL`
-   - `JWT_SECRET`
-   - `RAZORPAY_KEY_ID`
-   - `RAZORPAY_KEY_SECRET`
-6. Click **Deploy** — your API will be live in a few minutes!
+This project is deployed on **Render**.
 
-> 💡 Tip: Use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for your cloud database.
+- **Live URL:** https://ecommerce-backend-52ui.onrender.com
+- **Database:** MongoDB Atlas
+- **Build Command:** `npm install`
+- **Start Command:** `node server.js`
 
 ---
 
-## 🌐 Environment Variables Reference
+## 🌍 Environment Variables
 
 | Variable | Description |
 |---|---|
 | `PORT` | Port number (default: 7000) |
-| `MONGO_URL` | MongoDB connection string |
+| `MONGO_URL` | MongoDB Atlas connection string |
 | `JWT_SECRET` | Secret key for signing JWT tokens |
-| `RAZORPAY_KEY_ID` | Razorpay API key ID |
-| `RAZORPAY_KEY_SECRET` | Razorpay API secret key |
 
 ---
 
 ## 👨‍💻 Author
 
-**Your Name**  
-GitHub: [@your-username](https://github.com/your-username)  
-LinkedIn: [your-linkedin](https://linkedin.com/in/your-profile)
+**Sunil Memakiya**
+
+GitHub: https://github.com/memakiysunil
+
+LinkedIn: https://www.linkedin.com/in/memakiya-sunil-a710683ba/
 
 ---
 
